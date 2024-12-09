@@ -1,11 +1,14 @@
 import sqlite3
 
+# Establishing the database connection
+
 con = sqlite3.connect('test.db')
+con.execute("PRAGMA foreign_keys = 1")  # Enable foreign key support
 cur = con.cursor()
 
 cur.execute("CREATE TABLE IF NOT EXISTS user(userID INTEGER PRIMARY KEY, firstName NOT NULL, lastName NOT NULL)")
 cur.execute(
-    "CREATE TABLE IF NOT EXISTS contactInfo(userID, phoneNumber INTEGER, FOREIGN KEY(userID) REFERENCES user(userID))")
+    "CREATE TABLE IF NOT EXISTS contactInfo(userID, phoneNumber INTEGER, FOREIGN KEY(userID) REFERENCES user(userID) ON DELETE CASCADE)")
 
 
 def validUser(userID):
@@ -93,35 +96,46 @@ def deleteUser():
     if not validUser(userID):
         print("\nA user with this ID does not exist\n")
     else:
+        # Delete the associated contactInfo first
+        cur.execute("DELETE FROM contactInfo WHERE userID = ?", (userID,))
+        # Then delete the user record
         cur.execute("DELETE FROM user WHERE userID = ?", (userID,))
-        con.commit()
+        con.commit()    # Commit after both deletions
         print("\nUser has been deleted.\n")
 
+def main():
+    endProgram = False
 
-endProgram = False
-userInput = 0
+    while not endProgram:
+        """
+        A loop that will ask the user for input to perform CRUD operations.
 
-while not endProgram:
-    """
-    A loop that will ask the user for input to perform CRUD operations.
+        When the user selects exit the loop will end and the database connection is closed.
+        """
+        print("\n1: Create user\n"
+              "2: Read users\n"
+              "3: Update user\n"
+              "4: Delete user\n"
+              "5: Exit & close database\n")
 
-    When the user selects exit the loop will end and the database connection is closed.
-    """
-    print("\n1: Create user\n"
-          "2: Read users\n"
-          "3: Update user\n"
-          "4: Delete user\n"
-          "5: Exit & close database\n")
+        try:
+            userInput = int(input("Enter your choice (1-5): "))
+            if userInput == 1:
+                createUser()
+            elif userInput == 2:
+                readUsers()
+            elif userInput == 3:
+                updateUser()
+            elif userInput == 4:
+                deleteUser()
+            elif userInput == 5:
+                con.close()
+                endProgram = True
+                print("\nDatabase connection closed.")
+            else:
+                print("Invalid choice, please select a number between 1 and 5.")
+        except ValueError:
+            print("\nInvalid input! Please enter a valid number between 1 and 5.")
 
-    userInput = int(input("Enter your choice (1-5): "))
-    if userInput == 1:
-        createUser()
-    if userInput == 2:
-        readUsers()
-    if userInput == 3:
-        updateUser()
-    if userInput == 4:
-        deleteUser()
-    if userInput == 5:
-        con.close()
-        endProgram = True
+if __name__ == "__main__":
+    main()
